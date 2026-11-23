@@ -1,0 +1,35 @@
+========================================
+BookmarkBox API - Verification Results
+========================================
+
+1. Task 1: Bookmark Repository (src/repositories/bookmarkRepository.js)
+   - createBookmark({ userId, title, url }):
+     * Inserts a bookmark row associated with the authenticated user ID and returns the created record.
+     * Verified with 201 Created response.
+   - listBookmarksByUser(userId):
+     * Queries and returns all bookmarks owned by the given userId, ordered newest first (`createdAt: 'desc'`).
+     * Verified with 200 OK response returning newly created bookmarks in descending chronological order.
+     * User bookmark isolation verified: separate users only see their own bookmarks.
+
+2. Task 2: Register with Password Hashing (src/services/authService.js -> register)
+   - Input validation: Rejects missing/empty name, email, or password with HTTP 400 (INVALID_INPUT).
+   - Duplicate email handling: Checks existing users and rejects duplicate emails with HTTP 409 (EMAIL_EXISTS).
+   - Password security: Securely hashes password using bcryptjs with 10 salt rounds before persisting to database.
+   - Response safety: Returns public user object `{ id, name, email }` and never leaks password or password hash.
+   - Verified with HTTP 201 Created.
+
+3. Task 3: Login with JWT (src/services/authService.js -> login)
+   - Input validation: Rejects missing/empty email or password with HTTP 400 (INVALID_INPUT).
+   - Credential verification: Looks up user by normalized email and verifies password hash with `bcrypt.compare`.
+   - Authentication failure: Rejects non-existent email or wrong password with HTTP 401 (INVALID_CREDENTIALS).
+   - Token issuance: On successful match, issues signed JWT token containing `{ sub: user.id }` signed with JWT_SECRET and 1 hour expiration. Returns `{ token }`.
+   - Verified with HTTP 200 OK.
+
+4. End-to-End Workflow Verification:
+   - POST /auth/register: Registers new user Ada (ada@demo.com) -> Status 201.
+   - POST /auth/login: Logs in user and returns JWT token -> Status 200.
+   - POST /bookmarks: Creates bookmark "Kalvium" (https://kalvium.com) with Bearer token -> Status 201.
+   - POST /bookmarks: Creates second bookmark "GitHub" (https://github.com) with Bearer token -> Status 201.
+   - GET /bookmarks: Retrieves bookmarks for user -> Status 200, returns [GitHub, Kalvium] (newest first).
+   - GET /bookmarks (without token): Rejects request with HTTP 401 UNAUTHORIZED.
+   - All tests passed successfully.
